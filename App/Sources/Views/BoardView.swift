@@ -2,8 +2,8 @@ import SwiftUI
 import ArrowsCore
 
 /// Renders the board as connected line-art arrows — one per `Piece`, spanning
-/// its cells — on a dotted background. Reports taps via `onTap` and animates
-/// collision feedback.
+/// its cells — on a dotted background. Reports taps via `onTap`, slides escaped
+/// pieces off the board, and flashes collisions.
 struct BoardView: View {
     let board: Board
     var hint: Position? = nil
@@ -11,6 +11,7 @@ struct BoardView: View {
 
     @State private var collisionPieceID: Int?
     @State private var shake: CGFloat = 0
+    @State private var ghosts: [Ghost] = []
 
     private let spacing: CGFloat = 2
 
@@ -30,11 +31,19 @@ struct BoardView: View {
                             .offset(x: rect.minX, y: rect.minY)
                     }
                 }
+                ForEach(ghosts) { ghost in
+                    let rect = pieceRect(ghost.piece, cellSize: cellSize)
+                    EscapingPieceView(direction: ghost.piece.direction, travel: side) {
+                        ghosts.removeAll { $0.id == ghost.id }
+                    }
+                    .frame(width: rect.width, height: rect.height)
+                    .offset(x: rect.minX, y: rect.minY)
+                    .allowsHitTesting(false)
+                }
             }
             .frame(width: side, height: side, alignment: .topLeading)
             .background(DotGrid(spacing: max(12, cellSize / 2)))
             .modifier(ShakeEffect(animatableData: shake))
-            .animation(.easeInOut(duration: 0.2), value: board.remaining)
         }
         .aspectRatio(1, contentMode: .fit)
     }
@@ -66,13 +75,48 @@ struct BoardView: View {
 
     private func handleTap(_ piece: Piece) {
         let outcome = onTap(piece.head)
-        if case let .blocked(_, blockerID) = outcome {
+        switch outcome {
+        case .escaped:
+            ghosts.append(Ghost(piece: piece))
+        case let .blocked(_, blockerID):
             collisionPieceID = blockerID
             withAnimation(.linear(duration: 0.45)) { shake += 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 if collisionPieceID == blockerID { collisionPieceID = nil }
             }
+        case .ignored:
+            break
         }
+    }
+}
+
+private struct Ghost: Identifiable {
+    let id = UUID()
+    let piece: Piece
+}
+
+/// A piece sliding off the board in its direction, then fading out.
+private struct EscapingPieceView: View {
+    let direction: Direction
+    let travel: CGFloat
+    let onDone: () -> Void
+
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        PieceArrowView(direction: direction)
+            .offset(slide)
+            .opacity(Double(1 - progress))
+            .onAppear {
+                withAnimation(.easeIn(duration: 0.3)) { progress = 1 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { onDone() }
+            }
+    }
+
+    private var slide: CGSize {
+        let distance = travel * progress
+        let (dr, dc) = direction.delta
+        return CGSize(width: CGFloat(dc) * distance, height: CGFloat(dr) * distance)
     }
 }
 

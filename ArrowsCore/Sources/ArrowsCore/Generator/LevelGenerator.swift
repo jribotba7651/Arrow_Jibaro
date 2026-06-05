@@ -25,7 +25,7 @@ public enum LevelGenerator {
     public static func generate(level: Int, seed: UInt64) -> GeneratedLevel {
         let n = size(forLevel: level)
         var rng = SeededGenerator(seed: seed)
-        let board = build(size: n, maxLength: min(4, n), rng: &rng)
+        let board = build(size: n, maxLength: min(5, n), rng: &rng)
         return GeneratedLevel(board: board, seed: seed, level: level)
     }
 
@@ -84,8 +84,9 @@ public enum LevelGenerator {
         return result
     }
 
-    /// Builds a straight piece through `anchor` along `dir`, with all cells empty
-    /// and a forward path clear of placed pieces. Returns nil if it doesn't fit.
+    /// Builds a straight piece through `anchor` along `dir`, biased toward the
+    /// longer half of the available run, with all cells empty and a forward path
+    /// clear of placed pieces. Returns nil if it doesn't fit.
     private static func makePiece(anchor: Position, dir: Direction, occupied: [[Bool]],
                                   size n: Int, maxLength: Int, id: Int,
                                   rng: inout SeededGenerator) -> Piece? {
@@ -100,7 +101,8 @@ public enum LevelGenerator {
         let maxRun = forward + backward + 1
         let limit = min(maxLength, maxRun)
         guard limit >= 1 else { return nil }
-        let length = Int(rng.next() % UInt64(limit)) + 1
+        let lower = (limit + 1) / 2
+        let length = lower + Int(rng.next() % UInt64(limit - lower + 1))
 
         let headForward = min(forward, length - 1)
         let tailBack = (length - 1) - headForward
