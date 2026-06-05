@@ -33,8 +33,9 @@ App/                        SwiftUI app (depends on ArrowsCore)
   Sources/
     ArrowsOfflineApp.swift  @main entry point
     ViewModels/             GameViewModel
-    Views/                  Home, Game, Board, Arrow, HUD
-    Persistence/            ProgressStore (UserDefaults + Codable)
+    Views/                  Home, Game, Board, Arrow, HUD, Settings, Stats
+    Feedback/               Haptics, SoundFX (system sounds)
+    Persistence/            ProgressStore, settings, appearance
 ```
 
 ## Running the tests (core)
@@ -68,12 +69,9 @@ Then run the `ArrowsOffline` scheme on an iOS 16+ simulator.
 - [x] **Generator** — seeded placement, greedy solver, validation
 - [x] **Board UI** — grid, arrows, HUD, win/lose overlay
 - [x] **Persistence** — `ProgressStore`, Home, Continue / New game
-- [ ] **Polish** — haptics, sounds, dark mode, hint, settings
-- [ ] **Extras** — daily challenge screen, streaks, collection
-
-The core (engine + generator) is `DailyChallenge`-ready: a seed derived from the
-calendar date already produces a reproducible daily level; only the UI screen is
-pending.
+- [x] **Polish** — haptics, system sounds, dark mode, hint, settings
+- [x] **Extras** — daily challenge + streaks, stats
+- [ ] **Collection** — unlockable arrow skins (only remaining item)
 
 ## References
 

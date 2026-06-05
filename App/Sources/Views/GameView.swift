@@ -4,6 +4,7 @@ import ArrowsCore
 struct GameView: View {
     @StateObject var viewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var highlight: HighlightInfo?
 
     var body: some View {
         VStack(spacing: 20) {
@@ -12,16 +13,66 @@ struct GameView: View {
                 lives: viewModel.lives,
                 remaining: viewModel.board.remaining
             )
-            BoardView(board: viewModel.board) { position in
-                viewModel.tap(position)
+            BoardView(
+                board: viewModel.board,
+                highlight: highlight?.position,
+                highlightColor: highlight?.color ?? .red
+            ) { position in
+                handleTap(position)
             }
             .padding()
+            Button {
+                showHint()
+            } label: {
+                Label("Hint", systemImage: "lightbulb")
+            }
+            .buttonStyle(.bordered)
+            .disabled(viewModel.status != .playing)
             Spacer()
         }
-        .navigationTitle("Level \(viewModel.level)")
+        .navigationTitle(viewModel.isDaily ? "Daily" : "Level \(viewModel.level)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink { SettingsView() } label: { Image(systemName: "gearshape") }
+            }
+        }
         .overlay { resultOverlay }
         .animation(.easeInOut, value: viewModel.status)
+        .animation(.easeInOut, value: highlight)
+    }
+
+    private func handleTap(_ position: Position) {
+        let outcome = viewModel.tap(position)
+        switch outcome {
+        case .escaped:
+            Haptics.escaped(); SoundFX.escaped()
+            clearHighlight()
+        case let .blocked(_, blocker):
+            Haptics.blocked(); SoundFX.blocked()
+            flash(blocker, isHint: false)
+        case .ignored:
+            break
+        }
+        if viewModel.status == .won {
+            Haptics.won(); SoundFX.won()
+        }
+    }
+
+    private func showHint() {
+        guard let position = viewModel.hint() else { return }
+        flash(position, isHint: true)
+    }
+
+    private func flash(_ position: Position, isHint: Bool) {
+        highlight = HighlightInfo(position: position, isHint: isHint)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            if highlight?.position == position { clearHighlight() }
+        }
+    }
+
+    private func clearHighlight() {
+        highlight = nil
     }
 
     @ViewBuilder
@@ -29,13 +80,21 @@ struct GameView: View {
         switch viewModel.status {
         case .playing:
             EmptyView()
+        case .won where viewModel.isDaily:
+            ResultOverlay(
+                title: "Daily done!",
+                systemImage: "star.fill",
+                tint: .yellow,
+                primaryTitle: "Home",
+                primaryAction: { dismiss() }
+            )
         case .won:
             ResultOverlay(
                 title: "Cleared!",
                 systemImage: "checkmark.seal.fill",
                 tint: .green,
                 primaryTitle: "Next level",
-                primaryAction: { viewModel.advanceToNextLevel() },
+                primaryAction: { viewModel.advanceToNextLevel(); clearHighlight() },
                 secondaryTitle: "Home",
                 secondaryAction: { dismiss() }
             )
@@ -45,12 +104,18 @@ struct GameView: View {
                 systemImage: "xmark.octagon.fill",
                 tint: .red,
                 primaryTitle: "Retry",
-                primaryAction: { viewModel.restart() },
+                primaryAction: { viewModel.restart(); clearHighlight() },
                 secondaryTitle: "Home",
                 secondaryAction: { dismiss() }
             )
         }
     }
+}
+
+private struct HighlightInfo: Equatable {
+    let position: Position
+    let isHint: Bool
+    var color: Color { isHint ? .green : .red }
 }
 
 private struct ResultOverlay: View {
@@ -59,8 +124,8 @@ private struct ResultOverlay: View {
     let tint: Color
     let primaryTitle: String
     let primaryAction: () -> Void
-    let secondaryTitle: String
-    let secondaryAction: () -> Void
+    var secondaryTitle: String? = nil
+    var secondaryAction: (() -> Void)? = nil
 
     var body: some View {
         ZStack {
@@ -74,8 +139,10 @@ private struct ResultOverlay: View {
                 VStack(spacing: 12) {
                     Button(primaryTitle, action: primaryAction)
                         .buttonStyle(.borderedProminent)
-                    Button(secondaryTitle, action: secondaryAction)
-                        .buttonStyle(.bordered)
+                    if let secondaryTitle, let secondaryAction {
+                        Button(secondaryTitle, action: secondaryAction)
+                            .buttonStyle(.bordered)
+                    }
                 }
             }
             .padding(32)

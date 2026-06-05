@@ -7,7 +7,7 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 28) {
+            VStack(spacing: 24) {
                 Spacer()
                 Text("\u{1F3F9}")
                     .font(.system(size: 84))
@@ -17,6 +17,11 @@ struct HomeView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                if progress.dailyStreak > 0 {
+                    Label("\(progress.dailyStreak)-day streak", systemImage: "flame.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.orange)
+                }
                 Spacer()
                 VStack(spacing: 12) {
                     if progress.currentLevel > 1 {
@@ -34,11 +39,24 @@ struct HomeView: View {
                     } label: {
                         secondaryLabel("New game")
                     }
+                    NavigationLink {
+                        GameView(viewModel: .daily(store: store))
+                    } label: {
+                        secondaryLabel("Daily challenge")
+                    }
                 }
                 .padding(.horizontal, 40)
                 Spacer()
             }
             .padding()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink { SettingsView() } label: { Image(systemName: "gearshape") }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink { StatsView() } label: { Image(systemName: "chart.bar") }
+                }
+            }
             .onAppear { progress = store.load() }
         }
     }

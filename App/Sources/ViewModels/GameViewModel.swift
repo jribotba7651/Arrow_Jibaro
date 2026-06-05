@@ -9,15 +9,21 @@ final class GameViewModel: ObservableObject {
 
     private let startingLives: Int
     private let progressStore: ProgressStoring?
+    private let dailyToday: UInt64?
+    private let dailyYesterday: UInt64?
 
     init(
         level: Int = 1,
         seed: UInt64? = nil,
         lives: Int = 3,
-        progressStore: ProgressStoring? = nil
+        progressStore: ProgressStoring? = nil,
+        dailyToday: UInt64? = nil,
+        dailyYesterday: UInt64? = nil
     ) {
         self.startingLives = lives
         self.progressStore = progressStore
+        self.dailyToday = dailyToday
+        self.dailyYesterday = dailyYesterday
         let resolvedSeed = seed ?? Self.defaultSeed(forLevel: level)
         let generated = LevelGenerator.generate(level: level, seed: resolvedSeed)
         self.state = GameState(
@@ -29,19 +35,37 @@ final class GameViewModel: ObservableObject {
         persist()
     }
 
+    /// Builds today's daily challenge: a fixed-size level seeded from the date,
+    /// wired to update the daily streak on completion.
+    static func daily(
+        level: Int = 4,
+        store: ProgressStoring? = nil,
+        date: Date = Date(),
+        calendar: Calendar = .current
+    ) -> GameViewModel {
+        let today = DailyChallenge.seed(for: date, calendar: calendar)
+        let previous = calendar.date(byAdding: .day, value: -1, to: date) ?? date
+        let yesterday = DailyChallenge.seed(for: previous, calendar: calendar)
+        return GameViewModel(
+            level: level,
+            seed: today,
+            progressStore: store,
+            dailyToday: today,
+            dailyYesterday: yesterday
+        )
+    }
+
     var board: Board { state.board }
     var lives: Int { state.lives }
     var level: Int { state.level }
     var status: GameState.Status { state.status }
+    var isDaily: Bool { dailyToday != nil }
 
     /// Applies a tap on a cell. No-op on empty cells or once the game is over.
     @discardableResult
     func tap(_ position: Position) -> TapOutcome {
-        objectWillChange.send()
         let outcome = GameEngine.tap(position, in: &state)
-        if state.status == .won {
-            persist()
-        }
+        if state.status == .won { persist() }
         return outcome
     }
 
@@ -69,12 +93,32 @@ final class GameViewModel: ObservableObject {
         persist()
     }
 
+    /// The next arrow the greedy solver would fire, used for the hint button.
+    func hint() -> Position? {
+        GreedySolver.solution(for: board)?.first
+    }
+
     private func persist() {
         guard let progressStore else { return }
-        var progress = progressStore.load()
-        progress.currentLevel = state.level
-        progress.highestLevelReached = max(progress.highestLevelReached, state.level)
-        progressStore.save(progress)
+        if let today = dailyToday {
+            guard state.status == .won else { return }
+            var progress = progressStore.load()
+            let todayKey = String(today)
+            guard progress.lastDailyCompleted != todayKey else { return }
+            if let yesterday = dailyYesterday,
+               progress.lastDailyCompleted == String(yesterday) {
+                progress.dailyStreak += 1
+            } else {
+                progress.dailyStreak = 1
+            }
+            progress.lastDailyCompleted = todayKey
+            progressStore.save(progress)
+        } else {
+            var progress = progressStore.load()
+            progress.currentLevel = state.level
+            progress.highestLevelReached = max(progress.highestLevelReached, state.level)
+            progressStore.save(progress)
+        }
     }
 
     private static func defaultSeed(forLevel level: Int) -> UInt64 {
