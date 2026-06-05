@@ -58,26 +58,26 @@ struct BoardView: View {
     private func cellView(at position: Position, size: CGFloat) -> some View {
         let arrow = board.arrow(at: position)
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(fillColor(position, hasArrow: arrow != nil))
+            RoundedRectangle(cornerRadius: 10)
+                .fill(fillColor(position))
             if position == collision {
-                RoundedRectangle(cornerRadius: 8).stroke(Color.red, lineWidth: 3)
+                RoundedRectangle(cornerRadius: 10).stroke(Color.red, lineWidth: 3)
             } else if position == hint {
                 HintRing()
             }
             if let arrow {
                 ArrowView(direction: arrow.direction)
-                    .padding(size * 0.16)
+                    .padding(size * 0.14)
             }
         }
         .contentShape(Rectangle())
         .onTapGesture { if arrow != nil { handleTap(position) } }
     }
 
-    private func fillColor(_ position: Position, hasArrow: Bool) -> Color {
-        if position == collision { return Color.red.opacity(0.22) }
-        if position == hint { return Color.green.opacity(0.18) }
-        return hasArrow ? Color.accentColor.opacity(0.16) : Color.gray.opacity(0.12)
+    private func fillColor(_ position: Position) -> Color {
+        if position == collision { return Color.red.opacity(0.16) }
+        if position == hint { return Color.green.opacity(0.16) }
+        return .clear
     }
 
     private func handleTap(_ position: Position) {
@@ -111,7 +111,7 @@ private struct HintRing: View {
     @State private var pulse = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 8)
+        RoundedRectangle(cornerRadius: 10)
             .stroke(Color.green, lineWidth: 3)
             .scaleEffect(pulse ? 1.0 : 0.86)
             .opacity(pulse ? 1.0 : 0.4)
