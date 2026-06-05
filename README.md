@@ -33,9 +33,10 @@ App/                        SwiftUI app (depends on ArrowsCore)
   Sources/
     ArrowsOfflineApp.swift  @main entry point
     ViewModels/             GameViewModel
-    Views/                  Home, Game, Board, Arrow, HUD, Settings, Stats
+    Views/                  Home, Game, Board, Arrow, HUD, Settings, Stats,
+                            Collection
     Feedback/               Haptics, SoundFX (system sounds)
-    Persistence/            ProgressStore, settings, appearance
+    Persistence/            ProgressStore, settings, appearance, skins
 ```
 
 ## Running the tests (core)
@@ -71,7 +72,7 @@ Then run the `ArrowsOffline` scheme on an iOS 16+ simulator.
 - [x] **Persistence** — `ProgressStore`, Home, Continue / New game
 - [x] **Polish** — haptics, system sounds, dark mode, hint, settings
 - [x] **Extras** — daily challenge + streaks, stats
-- [ ] **Collection** — unlockable arrow skins (only remaining item)
+- [x] **Collection** — unlockable arrow skins
 
 ## References
 

@@ -6,4 +6,5 @@ enum SettingsKey {
     static let sound = "settings.sound"
     static let haptics = "settings.haptics"
     static let appearance = "settings.appearance"
+    static let skin = "settings.skin"
 }

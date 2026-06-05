@@ -1,15 +1,19 @@
 import SwiftUI
 import ArrowsCore
 
-/// A single arrow glyph, rotated to match its direction.
+/// A single arrow glyph, drawn with the selected skin and rotated to match its
+/// direction.
 struct ArrowView: View {
     let direction: Direction
+    @AppStorage(SettingsKey.skin) private var skinRaw = ArrowSkin.classic.rawValue
+
+    private var skin: ArrowSkin { ArrowSkin(rawValue: skinRaw) ?? .classic }
 
     var body: some View {
-        Image(systemName: "arrow.up")
+        Image(systemName: skin.symbolName)
             .resizable()
             .scaledToFit()
-            .foregroundStyle(.tint)
+            .foregroundStyle(skin.tint)
             .rotationEffect(rotation)
     }
 

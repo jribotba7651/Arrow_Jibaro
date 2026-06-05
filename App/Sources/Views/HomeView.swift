@@ -54,6 +54,9 @@ struct HomeView: View {
                     NavigationLink { SettingsView() } label: { Image(systemName: "gearshape") }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink { CollectionView() } label: { Image(systemName: "paintpalette") }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink { StatsView() } label: { Image(systemName: "chart.bar") }
                 }
             }
