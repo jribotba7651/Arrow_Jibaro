@@ -35,8 +35,7 @@ final class GameViewModel: ObservableObject {
         persist()
     }
 
-    /// Builds today's daily challenge: a fixed-size level seeded from the date,
-    /// wired to update the daily streak on completion.
+    /// Today's daily challenge, wired to update the daily streak on completion.
     static func daily(
         level: Int = 4,
         store: ProgressStoring? = nil,
@@ -64,7 +63,7 @@ final class GameViewModel: ObservableObject {
     /// Applies a tap on a cell. No-op on empty cells or once the game is over.
     @discardableResult
     func tap(_ position: Position) -> TapOutcome {
-        let outcome = GameEngine.tap(position, in: &state)
+        let outcome = GameEngine.tap(at: position, in: &state)
         if state.status == .won { persist() }
         return outcome
     }
@@ -93,9 +92,10 @@ final class GameViewModel: ObservableObject {
         persist()
     }
 
-    /// The next arrow the greedy solver would fire, used for the hint button.
+    /// Head cell of the next piece the greedy solver would clear (for the hint).
     func hint() -> Position? {
-        GreedySolver.solution(for: board)?.first
+        guard let id = GreedySolver.solution(for: board)?.first else { return nil }
+        return board.pieces[id]?.head
     }
 
     private func persist() {
