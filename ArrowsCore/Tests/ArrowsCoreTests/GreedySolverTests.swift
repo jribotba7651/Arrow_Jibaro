@@ -23,10 +23,12 @@ final class GreedySolverTests: XCTestCase {
     }
 
     func testSolutionClearsTheBoard() {
+        // Greedy-solvable: the two right-pointing arrows are blocked until the
+        // down arrow at (0,2) escapes, after which they clear left-to-right.
         let board = BoardFactory.makeBoard([
-            ">.<",
+            ">>v",
             "...",
-            "v.^",
+            "...",
         ])
         guard let moves = GreedySolver.solution(for: board) else {
             return XCTFail("expected a solution")

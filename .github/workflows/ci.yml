@@ -16,7 +16,7 @@ jobs:
 
   app-build:
     name: Build app
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -29,7 +29,7 @@ jobs:
           xcodebuild
           -project ArrowsOffline.xcodeproj
           -scheme ArrowsOffline
-          -destination 'platform=iOS Simulator,name=iPhone 15'
+          -destination 'generic/platform=iOS Simulator'
           build
           CODE_SIGNING_ALLOWED=NO
         working-directory: App
