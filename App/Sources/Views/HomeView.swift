@@ -2,6 +2,9 @@ import SwiftUI
 import ArrowsCore
 
 struct HomeView: View {
+    @State private var progress = GameProgress.initial
+    private let store = ProgressStore()
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 28) {
@@ -15,21 +18,49 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 Spacer()
-                NavigationLink {
-                    GameView(viewModel: GameViewModel(level: 1))
-                } label: {
-                    Text("Play")
-                        .font(.title2.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(.tint, in: RoundedRectangle(cornerRadius: 16))
-                        .foregroundStyle(.white)
+                VStack(spacing: 12) {
+                    if progress.currentLevel > 1 {
+                        NavigationLink {
+                            GameView(viewModel: GameViewModel(
+                                level: progress.currentLevel,
+                                progressStore: store
+                            ))
+                        } label: {
+                            primaryLabel("Continue \u{00B7} Level \(progress.currentLevel)")
+                        }
+                    }
+                    NavigationLink {
+                        GameView(viewModel: GameViewModel(level: 1, progressStore: store))
+                    } label: {
+                        secondaryLabel("New game")
+                    }
                 }
                 .padding(.horizontal, 40)
                 Spacer()
             }
             .padding()
+            .onAppear { progress = store.load() }
         }
+    }
+
+    private func primaryLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.title2.bold())
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(.tint, in: RoundedRectangle(cornerRadius: 16))
+            .foregroundStyle(.white)
+    }
+
+    private func secondaryLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.title3.bold())
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 16).stroke(.tint, lineWidth: 2)
+            )
+            .foregroundStyle(.tint)
     }
 }
 

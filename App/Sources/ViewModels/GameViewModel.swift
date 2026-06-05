@@ -8,9 +8,16 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var state: GameState
 
     private let startingLives: Int
+    private let progressStore: ProgressStoring?
 
-    init(level: Int = 1, seed: UInt64? = nil, lives: Int = 3) {
+    init(
+        level: Int = 1,
+        seed: UInt64? = nil,
+        lives: Int = 3,
+        progressStore: ProgressStoring? = nil
+    ) {
         self.startingLives = lives
+        self.progressStore = progressStore
         let resolvedSeed = seed ?? Self.defaultSeed(forLevel: level)
         let generated = LevelGenerator.generate(level: level, seed: resolvedSeed)
         self.state = GameState(
@@ -19,6 +26,7 @@ final class GameViewModel: ObservableObject {
             level: generated.level,
             seed: generated.seed
         )
+        persist()
     }
 
     var board: Board { state.board }
@@ -30,7 +38,11 @@ final class GameViewModel: ObservableObject {
     @discardableResult
     func tap(_ position: Position) -> TapOutcome {
         objectWillChange.send()
-        return GameEngine.tap(position, in: &state)
+        let outcome = GameEngine.tap(position, in: &state)
+        if state.status == .won {
+            persist()
+        }
+        return outcome
     }
 
     /// Replays the current level from scratch (same seed, fresh lives).
@@ -54,6 +66,15 @@ final class GameViewModel: ObservableObject {
             level: next,
             seed: generated.seed
         )
+        persist()
+    }
+
+    private func persist() {
+        guard let progressStore else { return }
+        var progress = progressStore.load()
+        progress.currentLevel = state.level
+        progress.highestLevelReached = max(progress.highestLevelReached, state.level)
+        progressStore.save(progress)
     }
 
     private static func defaultSeed(forLevel level: Int) -> UInt64 {

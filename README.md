@@ -17,21 +17,27 @@ when the board is empty. No timer, no pressure.
 
 ## Project layout
 
-The model and engine are **pure Swift** (no UIKit/SwiftUI), so they are 100%
-testable without a UI. The app layer only observes them.
+The model, engine and level generator are **pure Swift** (no UIKit/SwiftUI), so
+they are 100% testable without a UI. The app layer only observes them.
 
 ```
 ArrowsCore/                 Swift Package — pure, testable core
   Sources/ArrowsCore/
     Models/                 Direction, Position, Arrow, Board, GameState
-    Engine/                 ShotResolver, GameEngine
+    Engine/                 ShotResolver, GreedySolver, GameEngine
+    Generator/              SeededGenerator, LevelGenerator, DailyChallenge
   Tests/ArrowsCoreTests/    XCTest suites + textual board builder
+
+App/                        SwiftUI app (depends on ArrowsCore)
+  project.yml               XcodeGen spec — generates the Xcode project
+  Sources/
+    ArrowsOfflineApp.swift  @main entry point
+    ViewModels/             GameViewModel
+    Views/                  Home, Game, Board, Arrow, HUD
+    Persistence/            ProgressStore (UserDefaults + Codable)
 ```
 
-The SwiftUI app (added in a later phase) depends on `ArrowsCore` as a local
-Swift Package.
-
-## Running the tests
+## Running the tests (core)
 
 From a machine with the Swift toolchain (macOS / Xcode):
 
@@ -40,15 +46,37 @@ cd ArrowsCore
 swift test
 ```
 
+## Running the app
+
+The Xcode project is generated from `App/project.yml` with
+[XcodeGen](https://github.com/yonaskolb/XcodeGen):
+
+```sh
+brew install xcodegen   # once
+cd App
+xcodegen generate
+open ArrowsOffline.xcodeproj
+```
+
+Then run the `ArrowsOffline` scheme on an iOS 16+ simulator.
+
 ## Roadmap
 
 - [x] **Setup** — repo + package structure
 - [x] **Engine** — base types, shot resolution, apply move
-- [ ] **Game Loop** — `GameViewModel`, lives, win/lose orchestration
-- [ ] **Generator** — seeded placement, greedy solver, validation
-- [ ] **Board UI** — grid, arrows, fire/collision animations, HUD
-- [ ] **Persistence** — `ProgressStore`, Home, level navigation
+- [x] **Game Loop** — `GameViewModel`, lives, win/lose orchestration
+- [x] **Generator** — seeded placement, greedy solver, validation
+- [x] **Board UI** — grid, arrows, HUD, win/lose overlay
+- [x] **Persistence** — `ProgressStore`, Home, Continue / New game
 - [ ] **Polish** — haptics, sounds, dark mode, hint, settings
-- [ ] **Extras** — daily challenge, streaks, collection
+- [ ] **Extras** — daily challenge screen, streaks, collection
 
-Full plan and task board live in Notion (*Arrows Offline (SwiftUI)*).
+The core (engine + generator) is `DailyChallenge`-ready: a seed derived from the
+calendar date already produces a reproducible daily level; only the UI screen is
+pending.
+
+## References
+
+- goarrows (Go terminal clone) — generation logic + greedy solver
+- SERAP-KEREM/Arrows (Unity) — component architecture + collision detection
+- Original: *Arrows – Puzzle Escape* (Lessmore) — mechanic reference only
