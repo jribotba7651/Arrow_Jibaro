@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A cosmetic arrow style. Unlocks are gated by the highest level reached, so
+/// A cosmetic arrow color. Unlocks are gated by the highest level reached, so
 /// the collection rewards progress without affecting the mechanic.
 enum ArrowSkin: String, CaseIterable, Identifiable {
     case classic, neon, sunset, mono, ocean
@@ -17,24 +17,13 @@ enum ArrowSkin: String, CaseIterable, Identifiable {
         }
     }
 
-    /// SF Symbol used to draw the arrow (always points up; rotated per direction).
-    var symbolName: String {
-        switch self {
-        case .classic: return "arrow.up"
-        case .neon:    return "arrow.up"
-        case .sunset:  return "arrowtriangle.up.fill"
-        case .mono:    return "arrow.up"
-        case .ocean:   return "arrowshape.up.fill"
-        }
-    }
-
     var tint: Color {
         switch self {
-        case .classic: return .blue
-        case .neon:    return .green
-        case .sunset:  return .orange
+        case .classic: return Color(red: 0.09, green: 0.11, blue: 0.27) // deep navy
+        case .neon:    return Color(red: 0.13, green: 0.80, blue: 0.45)
+        case .sunset:  return Color(red: 0.98, green: 0.45, blue: 0.20)
         case .mono:    return .primary
-        case .ocean:   return .teal
+        case .ocean:   return Color(red: 0.10, green: 0.55, blue: 0.72)
         }
     }
 

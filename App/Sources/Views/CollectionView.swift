@@ -41,11 +41,8 @@ private struct SkinTile: View {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color.gray.opacity(0.12))
                 if isUnlocked {
-                    Image(systemName: skin.symbolName)
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(skin.tint)
-                        .padding(28)
+                    ArrowGlyph(color: skin.tint)
+                        .padding(30)
                 } else {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 26))
