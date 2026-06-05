@@ -2,53 +2,20 @@ import XCTest
 @testable import ArrowsCore
 
 final class GreedySolverTests: XCTestCase {
-    func testAllRightBoardIsSolvable() {
-        let board = BoardFactory.makeBoard([
-            ">>>",
-            ">>>",
-            ">>>",
-        ])
+    func testSolvableChain() {
+        // The front piece escapes first, then the one behind it.
+        let back = TestBoards.piece(0, .right, head: (0, 1), length: 1)
+        let front = TestBoards.piece(1, .right, head: (0, 3), length: 1)
+        let board = Board(size: 4, pieces: [back, front])
         XCTAssertTrue(GreedySolver.isSolvable(board))
-        XCTAssertEqual(GreedySolver.solution(for: board)?.count, 9)
+        XCTAssertEqual(GreedySolver.solution(for: board), [1, 0])
     }
 
-    func testArrowsFacingEachOtherAreStuck() {
-        // Neither arrow can escape: each is blocked by the other.
-        let board = BoardFactory.makeBoard([
-            "><",
-            "..",
-        ])
+    func testStuck() {
+        // Two length-1 pieces pointing into each other: neither can escape.
+        let a = TestBoards.piece(0, .right, head: (0, 0), length: 1)
+        let b = TestBoards.piece(1, .left, head: (0, 1), length: 1)
+        let board = Board(size: 2, pieces: [a, b])
         XCTAssertFalse(GreedySolver.isSolvable(board))
-        XCTAssertNil(GreedySolver.solution(for: board))
-    }
-
-    func testSolutionClearsTheBoard() {
-        // Greedy-solvable: the two right-pointing arrows are blocked until the
-        // down arrow at (0,2) escapes, after which they clear left-to-right.
-        let board = BoardFactory.makeBoard([
-            ">>v",
-            "...",
-            "...",
-        ])
-        guard let moves = GreedySolver.solution(for: board) else {
-            return XCTFail("expected a solution")
-        }
-        // Replaying the solution must empty the board.
-        var work = board
-        for move in moves {
-            XCTAssertTrue(ShotResolver.hasClearPath(on: work, at: move))
-            work.removeArrow(at: move)
-        }
-        XCTAssertTrue(work.isCleared)
-    }
-
-    func testFirstEscapableIsRowMajor() {
-        let board = BoardFactory.makeBoard([
-            "v.>",
-            "...",
-            "...",
-        ])
-        // Both arrows can escape; row-major picks (0,0) before (0,2).
-        XCTAssertEqual(GreedySolver.firstEscapable(in: board), Position(row: 0, col: 0))
     }
 }

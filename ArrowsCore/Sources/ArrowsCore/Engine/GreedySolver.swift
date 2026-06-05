@@ -1,34 +1,28 @@
 import Foundation
 
-/// Greedy, row-major solver. It repeatedly fires the first arrow (scanning in
-/// row-major order) whose path escapes the board, until the board is cleared or
-/// no arrow can escape. Because it uses the same `ShotResolver` as the live
-/// game, a board it can clear is solvable exactly the way the game plays.
+/// Greedy solver. Removing a piece only frees cells (never blocks another), so
+/// if any full solution exists, repeatedly removing any escapable piece clears
+/// the board. Boards built by reverse placement are therefore always solvable.
 public enum GreedySolver {
-    /// True if the greedy strategy fully clears the board.
     public static func isSolvable(_ board: Board) -> Bool {
         solution(for: board) != nil
     }
 
-    /// The sequence of taps that clears the board greedily, or `nil` if the
-    /// greedy strategy gets stuck before clearing it.
-    public static func solution(for board: Board) -> [Position]? {
+    /// The sequence of piece ids to tap to clear the board, or nil if stuck.
+    public static func solution(for board: Board) -> [Int]? {
         var work = board
-        var moves: [Position] = []
+        var moves: [Int] = []
         while !work.isCleared {
-            guard let position = firstEscapable(in: work) else { return nil }
-            work.removeArrow(at: position)
-            moves.append(position)
+            guard let id = firstEscapable(in: work) else { return nil }
+            work.remove(id)
+            moves.append(id)
         }
         return moves
     }
 
-    /// The first occupied position (row-major) whose arrow has a clear path off
-    /// the board.
-    static func firstEscapable(in board: Board) -> Position? {
-        for position in board.occupiedPositions
-        where ShotResolver.hasClearPath(on: board, at: position) {
-            return position
+    static func firstEscapable(in board: Board) -> Int? {
+        for id in board.pieceIDsInOrder where ShotResolver.canEscape(board, pieceID: id) {
+            return id
         }
         return nil
     }

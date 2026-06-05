@@ -2,56 +2,21 @@ import XCTest
 @testable import ArrowsCore
 
 final class BoardTests: XCTestCase {
-    func testEmptyBoardIsCleared() {
-        let board = Board(size: 3)
-        XCTAssertEqual(board.remaining, 0)
-        XCTAssertTrue(board.isCleared)
-    }
-
-    func testRemainingCountsArrows() {
-        let board = BoardFactory.makeBoard([
-            ">.<",
-            ".^.",
-            "v.>",
-        ])
-        XCTAssertEqual(board.remaining, 5)
-        XCTAssertFalse(board.isCleared)
-    }
-
-    func testInBounds() {
-        let board = Board(size: 2)
-        XCTAssertTrue(board.inBounds(Position(row: 0, col: 0)))
-        XCTAssertTrue(board.inBounds(Position(row: 1, col: 1)))
-        XCTAssertFalse(board.inBounds(Position(row: -1, col: 0)))
-        XCTAssertFalse(board.inBounds(Position(row: 0, col: 2)))
-    }
-
-    func testArrowAtOutOfBoundsIsNil() {
-        let board = BoardFactory.makeBoard([">.", ".<"])
-        XCTAssertNil(board.arrow(at: Position(row: 5, col: 5)))
-        XCTAssertNotNil(board.arrow(at: Position(row: 0, col: 0)))
-    }
-
-    func testRemoveArrowReturnsAndClears() {
-        var board = BoardFactory.makeBoard([">.", ".<"])
-        let removed = board.removeArrow(at: Position(row: 0, col: 0))
-        XCTAssertEqual(removed?.direction, .right)
-        XCTAssertNil(board.arrow(at: Position(row: 0, col: 0)))
+    func testOccupancyAndRemoval() {
+        let piece = TestBoards.piece(0, .right, head: (0, 2), length: 3) // (0,2),(0,1),(0,0)
+        var board = Board(size: 4, pieces: [piece])
         XCTAssertEqual(board.remaining, 1)
-        // Removing an empty cell is a no-op returning nil.
-        XCTAssertNil(board.removeArrow(at: Position(row: 0, col: 0)))
+        XCTAssertEqual(board.piece(at: Position(row: 0, col: 0))?.id, 0)
+        XCTAssertEqual(board.piece(at: Position(row: 0, col: 2))?.id, 0)
+        XCTAssertNil(board.piece(at: Position(row: 1, col: 0)))
+        board.remove(0)
+        XCTAssertTrue(board.isCleared)
+        XCTAssertNil(board.piece(at: Position(row: 0, col: 0)))
     }
 
-    func testOccupiedPositionsAreRowMajor() {
-        let board = BoardFactory.makeBoard([
-            ">.<",
-            "...",
-            "v..",
-        ])
-        XCTAssertEqual(board.occupiedPositions, [
-            Position(row: 0, col: 0),
-            Position(row: 0, col: 2),
-            Position(row: 2, col: 0),
-        ])
+    func testPieceCellsAndTail() {
+        let piece = TestBoards.piece(0, .up, head: (1, 2), length: 2) // (1,2),(2,2)
+        XCTAssertEqual(piece.cells, [Position(row: 1, col: 2), Position(row: 2, col: 2)])
+        XCTAssertEqual(piece.tail, Position(row: 2, col: 2))
     }
 }
