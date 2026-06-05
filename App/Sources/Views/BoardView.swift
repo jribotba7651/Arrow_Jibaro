@@ -36,6 +36,7 @@ struct BoardView: View {
                         ForEach(Array(piece.cells.enumerated()), id: \.offset) { _, cell in
                             Color.clear
                                 .frame(width: cellSize, height: cellSize)
+                                .contentShape(Rectangle())
                                 .offset(x: origin(cell.col, cellSize), y: origin(cell.row, cellSize))
                                 .onTapGesture { handleTap(piece) }
                         }
@@ -56,7 +57,7 @@ struct BoardView: View {
     }
 
     private func strokeStyle(_ cellSize: CGFloat) -> StrokeStyle {
-        StrokeStyle(lineWidth: cellSize * 0.16, lineCap: .round, lineJoin: .round)
+        StrokeStyle(lineWidth: cellSize * 0.12, lineCap: .round, lineJoin: .round)
     }
 
     private func origin(_ index: Int, _ cellSize: CGFloat) -> CGFloat {
@@ -94,6 +95,37 @@ struct BoardView: View {
 private struct Ghost: Identifiable {
     let id = UUID()
     let piece: Piece
+}
+
+/// A piece sliding off the board in its head direction, then fading out.
+private struct GhostPieceView: View {
+    let piece: Piece
+    let cellSize: CGFloat
+    let spacing: CGFloat
+    let side: CGFloat
+    let color: Color
+    let onDone: () -> Void
+
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        PiecePath(cells: piece.cells, headDirection: piece.headDirection,
+                  cellSize: cellSize, spacing: spacing)
+            .stroke(color, style: StrokeStyle(lineWidth: cellSize * 0.12, lineCap: .round, lineJoin: .round))
+            .frame(width: side, height: side, alignment: .topLeading)
+            .offset(slide)
+            .opacity(Double(1 - progress))
+            .onAppear {
+                withAnimation(.easeIn(duration: 0.3)) { progress = 1 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { onDone() }
+            }
+    }
+
+    private var slide: CGSize {
+        let distance = side * progress
+        let (dr, dc) = piece.headDirection.delta
+        return CGSize(width: CGFloat(dc) * distance, height: CGFloat(dr) * distance)
+    }
 }
 
 /// One snake piece as a single continuous rounded line through its cell centers,
@@ -134,37 +166,6 @@ struct PiecePath: Shape {
             x: CGFloat(p.col) * (cellSize + spacing) + cellSize / 2,
             y: CGFloat(p.row) * (cellSize + spacing) + cellSize / 2
         )
-    }
-}
-
-/// A piece sliding off the board in its head direction, then fading out.
-private struct GhostPieceView: View {
-    let piece: Piece
-    let cellSize: CGFloat
-    let spacing: CGFloat
-    let side: CGFloat
-    let color: Color
-    let onDone: () -> Void
-
-    @State private var progress: CGFloat = 0
-
-    var body: some View {
-        PiecePath(cells: piece.cells, headDirection: piece.headDirection,
-                  cellSize: cellSize, spacing: spacing)
-            .stroke(color, style: StrokeStyle(lineWidth: cellSize * 0.16, lineCap: .round, lineJoin: .round))
-            .frame(width: side, height: side, alignment: .topLeading)
-            .offset(slide)
-            .opacity(Double(1 - progress))
-            .onAppear {
-                withAnimation(.easeIn(duration: 0.3)) { progress = 1 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { onDone() }
-            }
-    }
-
-    private var slide: CGSize {
-        let distance = side * progress
-        let (dr, dc) = piece.headDirection.delta
-        return CGSize(width: CGFloat(dc) * distance, height: CGFloat(dr) * distance)
     }
 }
 
