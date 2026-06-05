@@ -57,7 +57,7 @@ struct BoardView: View {
     }
 
     private func strokeStyle(_ cellSize: CGFloat) -> StrokeStyle {
-        StrokeStyle(lineWidth: min(cellSize * 0.12, 5), lineCap: .round, lineJoin: .round)
+        StrokeStyle(lineWidth: max(1, min(cellSize * 0.055, 2.5)), lineCap: .butt, lineJoin: .miter)
     }
 
     private func origin(_ index: Int, _ cellSize: CGFloat) -> CGFloat {
@@ -111,7 +111,7 @@ private struct GhostPieceView: View {
     var body: some View {
         PiecePath(cells: piece.cells, headDirection: piece.headDirection,
                   cellSize: cellSize, spacing: spacing)
-            .stroke(color, style: StrokeStyle(lineWidth: min(cellSize * 0.12, 5), lineCap: .round, lineJoin: .round))
+            .stroke(color, style: StrokeStyle(lineWidth: max(1, min(cellSize * 0.055, 2.5)), lineCap: .butt, lineJoin: .miter))
             .frame(width: side, height: side, alignment: .topLeading)
             .offset(slide)
             .opacity(Double(1 - progress))
@@ -141,7 +141,7 @@ struct PiecePath: Shape {
         guard !cells.isEmpty else { return path }
         let centers = cells.map(center)
         let (dr, dc) = headDirection.delta
-        let ext = cellSize * 0.25
+        let ext = cellSize * 0.30
         let headPoint = CGPoint(
             x: centers[centers.count - 1].x + CGFloat(dc) * ext,
             y: centers[centers.count - 1].y + CGFloat(dr) * ext
@@ -152,7 +152,7 @@ struct PiecePath: Shape {
         path.addLine(to: headPoint)
 
         let ux = CGFloat(dc), uy = CGFloat(dr)
-        let hs = cellSize * 0.22
+        let hs = cellSize * 0.13
         let perpX = -uy, perpY = ux
         let baseX = headPoint.x - ux * hs, baseY = headPoint.y - uy * hs
         path.move(to: CGPoint(x: baseX + perpX * hs, y: baseY + perpY * hs))
