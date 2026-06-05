@@ -4,7 +4,7 @@ import ArrowsCore
 struct GameView: View {
     @StateObject var viewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var highlight: HighlightInfo?
+    @State private var hintCell: Position?
 
     var body: some View {
         VStack(spacing: 20) {
@@ -13,13 +13,10 @@ struct GameView: View {
                 lives: viewModel.lives,
                 remaining: viewModel.board.remaining
             )
-            BoardView(
-                board: viewModel.board,
-                highlight: highlight?.position,
-                highlightColor: highlight?.color ?? .red
-            ) { position in
+            BoardView(board: viewModel.board, hint: hintCell) { position in
                 handleTap(position)
             }
+            .id(viewModel.level)
             .padding()
             Button {
                 showHint()
@@ -37,42 +34,29 @@ struct GameView: View {
                 NavigationLink { SettingsView() } label: { Image(systemName: "gearshape") }
             }
         }
+        .overlay { if viewModel.status == .won { ConfettiView() } }
         .overlay { resultOverlay }
         .animation(.easeInOut, value: viewModel.status)
-        .animation(.easeInOut, value: highlight)
     }
 
-    private func handleTap(_ position: Position) {
+    @discardableResult
+    private func handleTap(_ position: Position) -> TapOutcome {
         let outcome = viewModel.tap(position)
         switch outcome {
-        case .escaped:
-            Haptics.escaped(); SoundFX.escaped()
-            clearHighlight()
-        case let .blocked(_, blocker):
-            Haptics.blocked(); SoundFX.blocked()
-            flash(blocker, isHint: false)
-        case .ignored:
-            break
+        case .escaped: Haptics.escaped(); SoundFX.escaped()
+        case .blocked: Haptics.blocked(); SoundFX.blocked()
+        case .ignored: break
         }
-        if viewModel.status == .won {
-            Haptics.won(); SoundFX.won()
-        }
+        if viewModel.status == .won { Haptics.won(); SoundFX.won() }
+        return outcome
     }
 
     private func showHint() {
         guard let position = viewModel.hint() else { return }
-        flash(position, isHint: true)
-    }
-
-    private func flash(_ position: Position, isHint: Bool) {
-        highlight = HighlightInfo(position: position, isHint: isHint)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-            if highlight?.position == position { clearHighlight() }
+        hintCell = position
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            if hintCell == position { hintCell = nil }
         }
-    }
-
-    private func clearHighlight() {
-        highlight = nil
     }
 
     @ViewBuilder
@@ -94,7 +78,7 @@ struct GameView: View {
                 systemImage: "checkmark.seal.fill",
                 tint: .green,
                 primaryTitle: "Next level",
-                primaryAction: { viewModel.advanceToNextLevel(); clearHighlight() },
+                primaryAction: { hintCell = nil; viewModel.advanceToNextLevel() },
                 secondaryTitle: "Home",
                 secondaryAction: { dismiss() }
             )
@@ -104,18 +88,12 @@ struct GameView: View {
                 systemImage: "xmark.octagon.fill",
                 tint: .red,
                 primaryTitle: "Retry",
-                primaryAction: { viewModel.restart(); clearHighlight() },
+                primaryAction: { hintCell = nil; viewModel.restart() },
                 secondaryTitle: "Home",
                 secondaryAction: { dismiss() }
             )
         }
     }
-}
-
-private struct HighlightInfo: Equatable {
-    let position: Position
-    let isHint: Bool
-    var color: Color { isHint ? .green : .red }
 }
 
 private struct ResultOverlay: View {
