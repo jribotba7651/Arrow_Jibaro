@@ -14,7 +14,7 @@ struct BoardView: View {
     @State private var collision: Position?
     @State private var shake: CGFloat = 0
 
-    private let spacing: CGFloat = 6
+    private let spacing: CGFloat = 2
 
     var body: some View {
         GeometryReader { geo in
@@ -39,7 +39,7 @@ struct BoardView: View {
                 }
             }
             .frame(width: side, height: side, alignment: .topLeading)
-            .background(DotGrid(spacing: max(14, cellSize / 2)))
+            .background(DotGrid(spacing: max(12, cellSize / 2)))
             .modifier(ShakeEffect(animatableData: shake))
         }
         .aspectRatio(1, contentMode: .fit)
@@ -59,16 +59,16 @@ struct BoardView: View {
     private func cellView(at position: Position, size: CGFloat) -> some View {
         let arrow = board.arrow(at: position)
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 8)
                 .fill(fillColor(position))
             if position == collision {
-                RoundedRectangle(cornerRadius: 10).stroke(Color.red, lineWidth: 3)
+                RoundedRectangle(cornerRadius: 8).stroke(Color.red, lineWidth: 3)
             } else if position == hint {
                 HintRing()
             }
             if let arrow {
                 ArrowView(direction: arrow.direction, lengthFactor: Self.lengthFactor(for: arrow.id))
-                    .padding(size * 0.08)
+                    .padding(size * 0.06)
             }
         }
         .contentShape(Rectangle())
@@ -78,7 +78,7 @@ struct BoardView: View {
     /// Stable, cosmetic shaft length per arrow so the board shows varied lengths
     /// like the reference while staying a one-arrow-per-cell grid.
     private static func lengthFactor(for id: Int) -> CGFloat {
-        let options: [CGFloat] = [0.5, 0.65, 0.8, 1.0]
+        let options: [CGFloat] = [0.45, 0.65, 0.85, 1.0]
         return options[abs(id) % options.count]
     }
 
@@ -146,7 +146,7 @@ private struct HintRing: View {
     @State private var pulse = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 10)
+        RoundedRectangle(cornerRadius: 8)
             .stroke(Color.green, lineWidth: 3)
             .scaleEffect(pulse ? 1.0 : 0.86)
             .opacity(pulse ? 1.0 : 0.4)
