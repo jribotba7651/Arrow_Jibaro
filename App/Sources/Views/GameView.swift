@@ -17,7 +17,7 @@ struct GameView: View {
                 handleTap(position)
             }
             .id(viewModel.level)
-            .padding()
+            .padding(.horizontal, 6)
             Button {
                 showHint()
             } label: {

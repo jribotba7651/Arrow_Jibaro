@@ -3,6 +3,7 @@ import ArrowsCore
 
 struct HomeView: View {
     @State private var progress = GameProgress.initial
+    @State private var newGameLevel = 1
     private let store = ProgressStore()
 
     var body: some View {
@@ -34,10 +35,16 @@ struct HomeView: View {
                             primaryLabel("Continue \u{00B7} Level \(progress.currentLevel)")
                         }
                     }
-                    NavigationLink {
-                        GameView(viewModel: GameViewModel(level: 1, progressStore: store))
-                    } label: {
-                        secondaryLabel("New game")
+                    HStack(spacing: 8) {
+                        NavigationLink {
+                            GameView(viewModel: GameViewModel(level: newGameLevel,
+                                                              progressStore: store))
+                        } label: {
+                            secondaryLabel("Level \(newGameLevel)")
+                        }
+                        Stepper("", value: $newGameLevel, in: 1...20)
+                            .labelsHidden()
+                            .fixedSize()
                     }
                     NavigationLink {
                         GameView(viewModel: .daily(store: store))
