@@ -13,9 +13,10 @@ public struct GeneratedLevel: Hashable {
     }
 }
 
-/// Builds dense, always-solvable boards of straight pieces. Generation is in
-/// reverse: each new piece is placed only if its forward path is clear of the
-/// pieces already on the board, which guarantees the forward solve order exists.
+/// Builds dense, always-solvable boards of bending snake pieces. Generation is
+/// in reverse: each new piece (a self-avoiding random walk) is placed only if
+/// its head's forward path is clear of already-placed pieces and of its own
+/// body, which guarantees the forward solve order exists.
 public enum LevelGenerator {
     /// Grid side length: level 1 -> 3x3, level 2 -> 4x4, ...
     public static func size(forLevel level: Int) -> Int {
@@ -34,39 +35,33 @@ public enum LevelGenerator {
         var placed: [Piece] = []
         var nextID = 0
         var stalls = 0
-        let stallLimit = n * n * 2
+        let stallLimit = n * n * 3
 
         while stalls < stallLimit {
             let empties = emptyCells(occupied, n)
             if empties.isEmpty { break }
             let anchor = empties[Int(rng.next() % UInt64(empties.count))]
-            let start = Int(rng.next() % 4)
-            var didPlace = false
-            for offset in 0..<4 {
-                let dir = Direction.allCases[(start + offset) % 4]
-                if let piece = makePiece(anchor: anchor, dir: dir, occupied: occupied,
-                                         size: n, maxLength: maxLength, id: nextID, rng: &rng) {
-                    for cell in piece.cells { occupied[cell.row][cell.col] = true }
-                    placed.append(piece)
-                    nextID += 1
-                    didPlace = true
-                    break
-                }
+            if let piece = randomWalkPiece(start: anchor, occupied: occupied, size: n,
+                                           maxLength: maxLength, id: nextID, rng: &rng) {
+                for cell in piece.cells { occupied[cell.row][cell.col] = true }
+                placed.append(piece)
+                nextID += 1
+                stalls = 0
+            } else {
+                stalls += 1
             }
-            if didPlace { stalls = 0 } else { stalls += 1 }
         }
 
-        // Fill leftover single cells where a length-1 piece has a clear forward path.
+        // Fill leftover single cells with a length-1 piece that has a clear path.
         for r in 0..<n {
             for c in 0..<n where !occupied[r][c] {
-                for dir in Direction.allCases {
-                    let head = Position(row: r, col: c)
-                    if frontClear(head: head, dir: dir, occupied: occupied, size: n) {
-                        placed.append(Piece(id: nextID, direction: dir, head: head, length: 1))
-                        occupied[r][c] = true
-                        nextID += 1
-                        break
-                    }
+                let cell = Position(row: r, col: c)
+                for dir in Direction.allCases
+                where frontClear(head: cell, dir: dir, occupied: occupied, size: n, exclude: [cell]) {
+                    placed.append(Piece(id: nextID, cells: [cell], headDirection: dir))
+                    occupied[r][c] = true
+                    nextID += 1
+                    break
                 }
             }
         }
@@ -84,45 +79,67 @@ public enum LevelGenerator {
         return result
     }
 
-    /// Builds a straight piece through `anchor` along `dir`, biased toward the
-    /// longer half of the available run, with all cells empty and a forward path
-    /// clear of placed pieces. Returns nil if it doesn't fit.
-    private static func makePiece(anchor: Position, dir: Direction, occupied: [[Bool]],
-                                  size n: Int, maxLength: Int, id: Int,
-                                  rng: inout SeededGenerator) -> Piece? {
-        let (dr, dc) = dir.delta
-        var forward = 0
-        var r = anchor.row + dr, c = anchor.col + dc
-        while inBounds(r, c, n) && !occupied[r][c] { forward += 1; r += dr; c += dc }
-        var backward = 0
-        r = anchor.row - dr; c = anchor.col - dc
-        while inBounds(r, c, n) && !occupied[r][c] { backward += 1; r -= dr; c -= dc }
+    /// A self-avoiding random walk starting at `start`, turning at corners, with
+    /// a head whose forward path is clear of placed pieces and of its own body.
+    private static func randomWalkPiece(start: Position, occupied: [[Bool]], size n: Int,
+                                        maxLength: Int, id: Int,
+                                        rng: inout SeededGenerator) -> Piece? {
+        let targetLength = 2 + Int(rng.next() % UInt64(max(1, maxLength - 1)))
+        var path = [start]
+        var inPath: Set<Position> = [start]
+        var previous: Direction?
 
-        let maxRun = forward + backward + 1
-        let limit = min(maxLength, maxRun)
-        guard limit >= 1 else { return nil }
-        let lower = (limit + 1) / 2
-        let length = lower + Int(rng.next() % UInt64(limit - lower + 1))
-
-        let headForward = min(forward, length - 1)
-        let tailBack = (length - 1) - headForward
-        guard tailBack <= backward else { return nil }
-
-        let head = Position(row: anchor.row + dr * headForward, col: anchor.col + dc * headForward)
-        guard frontClear(head: head, dir: dir, occupied: occupied, size: n) else { return nil }
-
-        let piece = Piece(id: id, direction: dir, head: head, length: length)
-        for cell in piece.cells {
-            guard inBounds(cell.row, cell.col, n) && !occupied[cell.row][cell.col] else { return nil }
+        while path.count < targetLength {
+            let current = path[path.count - 1]
+            let startDir = Int(rng.next() % 4)
+            var moved = false
+            for offset in 0..<4 {
+                let dir = Direction.allCases[(startDir + offset) % 4]
+                if let previous, dir == previous.opposite { continue }
+                let (dr, dc) = dir.delta
+                let next = Position(row: current.row + dr, col: current.col + dc)
+                if inBounds(next.row, next.col, n) && !occupied[next.row][next.col]
+                    && !inPath.contains(next) {
+                    path.append(next)
+                    inPath.insert(next)
+                    previous = dir
+                    moved = true
+                    break
+                }
+            }
+            if !moved { break }
         }
-        return piece
+
+        let head = path[path.count - 1]
+        let headDirection: Direction
+        if path.count >= 2 {
+            headDirection = direction(from: path[path.count - 2], to: head)
+        } else {
+            guard let dir = Direction.allCases.first(where: {
+                frontClear(head: head, dir: $0, occupied: occupied, size: n, exclude: inPath)
+            }) else { return nil }
+            headDirection = dir
+        }
+        guard frontClear(head: head, dir: headDirection, occupied: occupied, size: n, exclude: inPath) else {
+            return nil
+        }
+        return Piece(id: id, cells: path, headDirection: headDirection)
     }
 
-    private static func frontClear(head: Position, dir: Direction, occupied: [[Bool]], size n: Int) -> Bool {
+    private static func direction(from a: Position, to b: Position) -> Direction {
+        if b.row < a.row { return .up }
+        if b.row > a.row { return .down }
+        if b.col < a.col { return .left }
+        return .right
+    }
+
+    private static func frontClear(head: Position, dir: Direction, occupied: [[Bool]],
+                                   size n: Int, exclude: Set<Position>) -> Bool {
         let (dr, dc) = dir.delta
         var r = head.row + dr, c = head.col + dc
         while inBounds(r, c, n) {
             if occupied[r][c] { return false }
+            if exclude.contains(Position(row: r, col: c)) { return false }
             r += dr; c += dc
         }
         return true

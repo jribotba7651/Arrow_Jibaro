@@ -2,7 +2,7 @@ import Foundation
 
 /// The outcome of firing a piece.
 public enum ShotResult: Equatable {
-    /// The forward path to the border is clear; the piece leaves the board.
+    /// The forward path from the head to the border is clear; the piece leaves.
     case escaped
     /// Another piece (`by`) blocks the forward path; the piece stays put.
     case blocked(by: Int)
@@ -14,7 +14,7 @@ public enum ShotResolver {
     /// the board. Returns nil if there is no such piece.
     public static func resolve(on board: Board, pieceID: Int) -> ShotResult? {
         guard let piece = board.pieces[pieceID] else { return nil }
-        let (dr, dc) = piece.direction.delta
+        let (dr, dc) = piece.headDirection.delta
         var r = piece.head.row + dr
         var c = piece.head.col + dc
         while board.inBounds(r, c) {

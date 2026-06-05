@@ -1,9 +1,9 @@
 import SwiftUI
 import ArrowsCore
 
-/// Renders the board as connected line-art arrows — one per `Piece`, spanning
-/// its cells — on a dotted background. Reports taps via `onTap`, slides escaped
-/// pieces off the board, and flashes collisions.
+/// Renders the board as a maze of connected snake pieces — one continuous
+/// rounded line per piece through its cell centers, with a chevron head — on a
+/// dotted background. Taps any cell of a piece; escaped pieces slide off.
 struct BoardView: View {
     let board: Board
     var hint: Position? = nil
@@ -12,8 +12,10 @@ struct BoardView: View {
     @State private var collisionPieceID: Int?
     @State private var shake: CGFloat = 0
     @State private var ghosts: [Ghost] = []
+    @AppStorage(SettingsKey.skin) private var skinRaw = ArrowSkin.classic.rawValue
 
     private let spacing: CGFloat = 2
+    private var skinTint: Color { (ArrowSkin(rawValue: skinRaw) ?? .classic).tint }
 
     var body: some View {
         GeometryReader { geo in
@@ -23,22 +25,27 @@ struct BoardView: View {
             ZStack(alignment: .topLeading) {
                 ForEach(board.pieceIDsInOrder, id: \.self) { id in
                     if let piece = board.pieces[id] {
-                        let rect = pieceRect(piece, cellSize: cellSize)
-                        PieceArrowView(direction: piece.direction, color: color(for: piece))
-                            .frame(width: rect.width, height: rect.height)
-                            .contentShape(Rectangle())
-                            .onTapGesture { handleTap(piece) }
-                            .offset(x: rect.minX, y: rect.minY)
+                        PiecePath(cells: piece.cells, headDirection: piece.headDirection,
+                                  cellSize: cellSize, spacing: spacing)
+                            .stroke(color(for: piece), style: strokeStyle(cellSize))
+                            .frame(width: side, height: side, alignment: .topLeading)
+                    }
+                }
+                ForEach(board.pieceIDsInOrder, id: \.self) { id in
+                    if let piece = board.pieces[id] {
+                        ForEach(Array(piece.cells.enumerated()), id: \.offset) { _, cell in
+                            Color.clear
+                                .frame(width: cellSize, height: cellSize)
+                                .offset(x: origin(cell.col, cellSize), y: origin(cell.row, cellSize))
+                                .onTapGesture { handleTap(piece) }
+                        }
                     }
                 }
                 ForEach(ghosts) { ghost in
-                    let rect = pieceRect(ghost.piece, cellSize: cellSize)
-                    EscapingPieceView(direction: ghost.piece.direction, travel: side) {
+                    GhostPieceView(piece: ghost.piece, cellSize: cellSize, spacing: spacing,
+                                   side: side, color: skinTint) {
                         ghosts.removeAll { $0.id == ghost.id }
                     }
-                    .frame(width: rect.width, height: rect.height)
-                    .offset(x: rect.minX, y: rect.minY)
-                    .allowsHitTesting(false)
                 }
             }
             .frame(width: side, height: side, alignment: .topLeading)
@@ -48,18 +55,12 @@ struct BoardView: View {
         .aspectRatio(1, contentMode: .fit)
     }
 
-    private func origin(_ index: Int, _ cellSize: CGFloat) -> CGFloat {
-        CGFloat(index) * (cellSize + spacing)
+    private func strokeStyle(_ cellSize: CGFloat) -> StrokeStyle {
+        StrokeStyle(lineWidth: cellSize * 0.16, lineCap: .round, lineJoin: .round)
     }
 
-    private func pieceRect(_ piece: Piece, cellSize: CGFloat) -> CGRect {
-        let rows = piece.cells.map { $0.row }
-        let cols = piece.cells.map { $0.col }
-        let minRow = rows.min() ?? 0, maxRow = rows.max() ?? 0
-        let minCol = cols.min() ?? 0, maxCol = cols.max() ?? 0
-        let width = CGFloat(maxCol - minCol + 1) * cellSize + CGFloat(maxCol - minCol) * spacing
-        let height = CGFloat(maxRow - minRow + 1) * cellSize + CGFloat(maxRow - minRow) * spacing
-        return CGRect(x: origin(minCol, cellSize), y: origin(minRow, cellSize), width: width, height: height)
+    private func origin(_ index: Int, _ cellSize: CGFloat) -> CGFloat {
+        CGFloat(index) * (cellSize + spacing)
     }
 
     private var hintPieceID: Int? {
@@ -67,10 +68,10 @@ struct BoardView: View {
         return board.piece(at: hint)?.id
     }
 
-    private func color(for piece: Piece) -> Color? {
+    private func color(for piece: Piece) -> Color {
         if piece.id == collisionPieceID { return .red }
         if piece.id == hintPieceID { return .green }
-        return nil
+        return skinTint
     }
 
     private func handleTap(_ piece: Piece) {
@@ -95,16 +96,63 @@ private struct Ghost: Identifiable {
     let piece: Piece
 }
 
-/// A piece sliding off the board in its direction, then fading out.
-private struct EscapingPieceView: View {
-    let direction: Direction
-    let travel: CGFloat
+/// One snake piece as a single continuous rounded line through its cell centers,
+/// ending in a chevron head.
+struct PiecePath: Shape {
+    let cells: [Position]
+    let headDirection: Direction
+    let cellSize: CGFloat
+    let spacing: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard !cells.isEmpty else { return path }
+        let centers = cells.map(center)
+        let (dr, dc) = headDirection.delta
+        let ext = cellSize * 0.30
+        let headPoint = CGPoint(
+            x: centers[centers.count - 1].x + CGFloat(dc) * ext,
+            y: centers[centers.count - 1].y + CGFloat(dr) * ext
+        )
+
+        path.move(to: centers[0])
+        for point in centers.dropFirst() { path.addLine(to: point) }
+        path.addLine(to: headPoint)
+
+        let ux = CGFloat(dc), uy = CGFloat(dr)
+        let hs = cellSize * 0.30
+        let perpX = -uy, perpY = ux
+        let baseX = headPoint.x - ux * hs, baseY = headPoint.y - uy * hs
+        path.move(to: CGPoint(x: baseX + perpX * hs, y: baseY + perpY * hs))
+        path.addLine(to: headPoint)
+        path.addLine(to: CGPoint(x: baseX - perpX * hs, y: baseY - perpY * hs))
+        return path
+    }
+
+    private func center(_ p: Position) -> CGPoint {
+        CGPoint(
+            x: CGFloat(p.col) * (cellSize + spacing) + cellSize / 2,
+            y: CGFloat(p.row) * (cellSize + spacing) + cellSize / 2
+        )
+    }
+}
+
+/// A piece sliding off the board in its head direction, then fading out.
+private struct GhostPieceView: View {
+    let piece: Piece
+    let cellSize: CGFloat
+    let spacing: CGFloat
+    let side: CGFloat
+    let color: Color
     let onDone: () -> Void
 
     @State private var progress: CGFloat = 0
 
     var body: some View {
-        PieceArrowView(direction: direction)
+        PiecePath(cells: piece.cells, headDirection: piece.headDirection,
+                  cellSize: cellSize, spacing: spacing)
+            .stroke(color, style: StrokeStyle(lineWidth: cellSize * 0.16, lineCap: .round, lineJoin: .round))
+            .frame(width: side, height: side, alignment: .topLeading)
             .offset(slide)
             .opacity(Double(1 - progress))
             .onAppear {
@@ -114,65 +162,9 @@ private struct EscapingPieceView: View {
     }
 
     private var slide: CGSize {
-        let distance = travel * progress
-        let (dr, dc) = direction.delta
+        let distance = side * progress
+        let (dr, dc) = piece.headDirection.delta
         return CGSize(width: CGFloat(dc) * distance, height: CGFloat(dr) * distance)
-    }
-}
-
-/// A connected arrow for a single straight piece: a shaft along the long axis of
-/// its rect with a chevron head, stroked with round caps/joins.
-struct PieceArrowShape: Shape {
-    let direction: Direction
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let thickness = min(rect.width, rect.height)
-        let margin = thickness * 0.30
-        let cx = rect.midX, cy = rect.midY
-        var head = CGPoint.zero
-        var tail = CGPoint.zero
-        switch direction {
-        case .right: tail = CGPoint(x: rect.minX + margin, y: cy); head = CGPoint(x: rect.maxX - margin, y: cy)
-        case .left:  tail = CGPoint(x: rect.maxX - margin, y: cy); head = CGPoint(x: rect.minX + margin, y: cy)
-        case .down:  tail = CGPoint(x: cx, y: rect.minY + margin); head = CGPoint(x: cx, y: rect.maxY - margin)
-        case .up:    tail = CGPoint(x: cx, y: rect.maxY - margin); head = CGPoint(x: cx, y: rect.minY + margin)
-        }
-
-        path.move(to: tail)
-        path.addLine(to: head)
-
-        let (dr, dc) = direction.delta
-        let ux = CGFloat(dc), uy = CGFloat(dr)
-        let hs = thickness * 0.34
-        let perpX = -uy, perpY = ux
-        let baseX = head.x - ux * hs, baseY = head.y - uy * hs
-        path.move(to: CGPoint(x: baseX + perpX * hs, y: baseY + perpY * hs))
-        path.addLine(to: head)
-        path.addLine(to: CGPoint(x: baseX - perpX * hs, y: baseY - perpY * hs))
-        return path
-    }
-}
-
-/// The piece arrow in the selected skin color (or an override for feedback).
-struct PieceArrowView: View {
-    let direction: Direction
-    var color: Color? = nil
-    @AppStorage(SettingsKey.skin) private var skinRaw = ArrowSkin.classic.rawValue
-
-    private var skin: ArrowSkin { ArrowSkin(rawValue: skinRaw) ?? .classic }
-
-    var body: some View {
-        GeometryReader { geo in
-            PieceArrowShape(direction: direction).stroke(
-                color ?? skin.tint,
-                style: StrokeStyle(
-                    lineWidth: min(geo.size.width, geo.size.height) * 0.16,
-                    lineCap: .round,
-                    lineJoin: .round
-                )
-            )
-        }
     }
 }
 
@@ -188,12 +180,7 @@ private struct DotGrid: View {
             while y < size.height {
                 var x = spacing / 2
                 while x < size.width {
-                    let rect = CGRect(
-                        x: x - dotSize / 2,
-                        y: y - dotSize / 2,
-                        width: dotSize,
-                        height: dotSize
-                    )
+                    let rect = CGRect(x: x - dotSize / 2, y: y - dotSize / 2, width: dotSize, height: dotSize)
                     context.fill(Path(ellipseIn: rect), with: .color(color))
                     x += spacing
                 }

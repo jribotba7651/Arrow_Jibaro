@@ -1,32 +1,24 @@
 import Foundation
 
-/// A straight segment of `length` cells with an arrow head at one end. The head
-/// is the front cell in `direction`; the body extends backwards from it.
+/// A connected path of cells (tail -> head) that may bend at corners, with an
+/// arrow head at the last cell. Cells are orthogonally adjacent in sequence.
 public struct Piece: Identifiable, Hashable, Codable {
     public let id: Int
-    public let direction: Direction
-    public let head: Position
-    public let length: Int
+    public let cells: [Position]
+    public let headDirection: Direction
 
-    public init(id: Int, direction: Direction, head: Position, length: Int) {
-        precondition(length >= 1, "piece length must be >= 1")
+    public init(id: Int, cells: [Position], headDirection: Direction) {
+        precondition(!cells.isEmpty, "piece must have at least one cell")
         self.id = id
-        self.direction = direction
-        self.head = head
-        self.length = length
+        self.cells = cells
+        self.headDirection = headDirection
     }
 
-    /// Cells occupied, from the head backwards along the opposite of `direction`.
-    public var cells: [Position] {
-        let (dr, dc) = direction.delta
-        return (0..<length).map { i in
-            Position(row: head.row - dr * i, col: head.col - dc * i)
-        }
-    }
+    /// The leading cell (where the arrow head is).
+    public var head: Position { cells[cells.count - 1] }
 
-    /// The back cell of the segment.
-    public var tail: Position {
-        let (dr, dc) = direction.delta
-        return Position(row: head.row - dr * (length - 1), col: head.col - dc * (length - 1))
-    }
+    /// The trailing cell.
+    public var tail: Position { cells[0] }
+
+    public var length: Int { cells.count }
 }

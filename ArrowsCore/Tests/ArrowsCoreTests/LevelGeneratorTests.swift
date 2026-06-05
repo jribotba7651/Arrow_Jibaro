@@ -25,6 +25,12 @@ final class LevelGeneratorTests: XCTestCase {
         }
     }
 
+    func testGeneratesBentPieces() {
+        // At least one multi-cell piece should appear in a reasonably sized board.
+        let generated = LevelGenerator.generate(level: 6, seed: 42)
+        XCTAssertTrue(generated.board.pieces.values.contains { $0.length > 1 })
+    }
+
     func testDailySeedIsStable() {
         XCTAssertEqual(DailyChallenge.seed(year: 2026, month: 6, day: 5), 20_260_605)
     }
