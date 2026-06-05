@@ -7,7 +7,7 @@ struct GameView: View {
     @State private var hintCell: Position?
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 8) {
             HUDView(
                 level: viewModel.level,
                 lives: viewModel.lives,
