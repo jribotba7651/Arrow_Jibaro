@@ -66,12 +66,19 @@ struct BoardView: View {
                 HintRing()
             }
             if let arrow {
-                ArrowView(direction: arrow.direction)
+                ArrowView(direction: arrow.direction, lengthFactor: Self.lengthFactor(for: arrow.id))
                     .padding(size * 0.08)
             }
         }
         .contentShape(Rectangle())
         .onTapGesture { if arrow != nil { handleTap(position) } }
+    }
+
+    /// Stable, cosmetic shaft length per arrow so the board shows varied lengths
+    /// like the reference while staying a one-arrow-per-cell grid.
+    private static func lengthFactor(for id: Int) -> CGFloat {
+        let options: [CGFloat] = [0.5, 0.65, 0.8, 1.0]
+        return options[abs(id) % options.count]
     }
 
     private func fillColor(_ position: Position) -> Color {
