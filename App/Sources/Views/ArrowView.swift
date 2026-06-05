@@ -1,17 +1,17 @@
 import SwiftUI
 import ArrowsCore
 
-/// An up-pointing arrow drawn as a single open path: a vertical shaft plus a
-/// chevron head. Stroked with round caps/joins it reads as the thin, rounded
-/// line-art arrow used in the reference art.
+/// An up-pointing arrow drawn as a single open path: a long vertical shaft plus
+/// a small chevron head. Stroked with round caps/joins it reads as the thin,
+/// rounded line-art arrow used in the reference art.
 struct ArrowShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let centerX = rect.midX
-        let topY = rect.minY + rect.height * 0.14
-        let bottomY = rect.maxY - rect.height * 0.14
-        let headW = rect.width * 0.26
-        let headH = rect.height * 0.26
+        let topY = rect.minY + rect.height * 0.06
+        let bottomY = rect.maxY - rect.height * 0.06
+        let headW = rect.width * 0.24
+        let headH = rect.height * 0.24
 
         // Shaft.
         path.move(to: CGPoint(x: centerX, y: bottomY))

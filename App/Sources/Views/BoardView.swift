@@ -67,7 +67,7 @@ struct BoardView: View {
             }
             if let arrow {
                 ArrowView(direction: arrow.direction)
-                    .padding(size * 0.14)
+                    .padding(size * 0.08)
             }
         }
         .contentShape(Rectangle())
