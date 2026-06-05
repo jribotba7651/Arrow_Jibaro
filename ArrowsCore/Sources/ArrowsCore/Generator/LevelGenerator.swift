@@ -26,7 +26,8 @@ public enum LevelGenerator {
     public static func generate(level: Int, seed: UInt64) -> GeneratedLevel {
         let n = size(forLevel: level)
         var rng = SeededGenerator(seed: seed)
-        let board = build(size: n, maxLength: min(5, n), rng: &rng)
+        // Short pieces (2–3 cells) pack far more densely than long ones.
+        let board = build(size: n, maxLength: min(3, n), rng: &rng)
         return GeneratedLevel(board: board, seed: seed, level: level)
     }
 
@@ -35,14 +36,16 @@ public enum LevelGenerator {
         var placed: [Piece] = []
         var nextID = 0
         var stalls = 0
-        let stallLimit = n * n * 3
+        let stallLimit = n * n * 8
 
         while stalls < stallLimit {
             let empties = emptyCells(occupied, n)
             if empties.isEmpty { break }
             let anchor = empties[Int(rng.next() % UInt64(empties.count))]
+            // After many stalls fall back to length-2 pieces to break deadlocks.
+            let tryMax = stalls > n * n ? 2 : maxLength
             if let piece = randomWalkPiece(start: anchor, occupied: occupied, size: n,
-                                           maxLength: maxLength, id: nextID, rng: &rng) {
+                                           maxLength: tryMax, id: nextID, rng: &rng) {
                 for cell in piece.cells { occupied[cell.row][cell.col] = true }
                 placed.append(piece)
                 nextID += 1
@@ -52,13 +55,29 @@ public enum LevelGenerator {
             }
         }
 
-        // Fill leftover single cells with a length-1 piece that has a clear path.
+        // Fill leftover adjacent empty pairs as 2-cell pieces.
         for r in 0..<n {
             for c in 0..<n where !occupied[r][c] {
-                let cell = Position(row: r, col: c)
+                let a = Position(row: r, col: c)
+                var filled = false
+                for dir in Direction.allCases {
+                    let (dr, dc) = dir.delta
+                    let nb = Position(row: r + dr, col: c + dc)
+                    guard inBounds(nb.row, nb.col, n), !occupied[nb.row][nb.col] else { continue }
+                    guard frontClear(head: nb, dir: dir, occupied: occupied, size: n,
+                                     exclude: [a, nb]) else { continue }
+                    placed.append(Piece(id: nextID, cells: [a, nb], headDirection: dir))
+                    occupied[r][c] = true
+                    occupied[nb.row][nb.col] = true
+                    nextID += 1
+                    filled = true
+                    break
+                }
+                if filled { continue }
+                // Fallback: single-cell piece if a clear direction exists.
                 for dir in Direction.allCases
-                where frontClear(head: cell, dir: dir, occupied: occupied, size: n, exclude: [cell]) {
-                    placed.append(Piece(id: nextID, cells: [cell], headDirection: dir))
+                where frontClear(head: a, dir: dir, occupied: occupied, size: n, exclude: [a]) {
+                    placed.append(Piece(id: nextID, cells: [a], headDirection: dir))
                     occupied[r][c] = true
                     nextID += 1
                     break

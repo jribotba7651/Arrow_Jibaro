@@ -14,7 +14,7 @@ struct BoardView: View {
     @State private var ghosts: [Ghost] = []
     @AppStorage(SettingsKey.skin) private var skinRaw = ArrowSkin.classic.rawValue
 
-    private let spacing: CGFloat = 2
+    private let spacing: CGFloat = 1
     private var skinTint: Color { (ArrowSkin(rawValue: skinRaw) ?? .classic).tint }
 
     var body: some View {
@@ -57,7 +57,7 @@ struct BoardView: View {
     }
 
     private func strokeStyle(_ cellSize: CGFloat) -> StrokeStyle {
-        StrokeStyle(lineWidth: cellSize * 0.12, lineCap: .round, lineJoin: .round)
+        StrokeStyle(lineWidth: cellSize * 0.09, lineCap: .round, lineJoin: .round)
     }
 
     private func origin(_ index: Int, _ cellSize: CGFloat) -> CGFloat {
@@ -111,7 +111,7 @@ private struct GhostPieceView: View {
     var body: some View {
         PiecePath(cells: piece.cells, headDirection: piece.headDirection,
                   cellSize: cellSize, spacing: spacing)
-            .stroke(color, style: StrokeStyle(lineWidth: cellSize * 0.12, lineCap: .round, lineJoin: .round))
+            .stroke(color, style: StrokeStyle(lineWidth: cellSize * 0.09, lineCap: .round, lineJoin: .round))
             .frame(width: side, height: side, alignment: .topLeading)
             .offset(slide)
             .opacity(Double(1 - progress))
@@ -141,7 +141,7 @@ struct PiecePath: Shape {
         guard !cells.isEmpty else { return path }
         let centers = cells.map(center)
         let (dr, dc) = headDirection.delta
-        let ext = cellSize * 0.30
+        let ext = cellSize * 0.25
         let headPoint = CGPoint(
             x: centers[centers.count - 1].x + CGFloat(dc) * ext,
             y: centers[centers.count - 1].y + CGFloat(dr) * ext
@@ -152,7 +152,7 @@ struct PiecePath: Shape {
         path.addLine(to: headPoint)
 
         let ux = CGFloat(dc), uy = CGFloat(dr)
-        let hs = cellSize * 0.30
+        let hs = cellSize * 0.22
         let perpX = -uy, perpY = ux
         let baseX = headPoint.x - ux * hs, baseY = headPoint.y - uy * hs
         path.move(to: CGPoint(x: baseX + perpX * hs, y: baseY + perpY * hs))
@@ -172,8 +172,8 @@ struct PiecePath: Shape {
 /// Subtle graph-paper dots behind the board.
 private struct DotGrid: View {
     var spacing: CGFloat
-    var dotSize: CGFloat = 2
-    var color: Color = Color.gray.opacity(0.22)
+    var dotSize: CGFloat = 1.5
+    var color: Color = Color.gray.opacity(0.18)
 
     var body: some View {
         Canvas { context, size in
