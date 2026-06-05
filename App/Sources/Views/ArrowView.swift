@@ -2,16 +2,16 @@ import SwiftUI
 import ArrowsCore
 
 /// An up-pointing arrow drawn as a single open path: a vertical shaft plus a
-/// chevron head. Stroked with round caps/joins it reads as the thick, rounded
+/// chevron head. Stroked with round caps/joins it reads as the thin, rounded
 /// line-art arrow used in the reference art.
 struct ArrowShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let centerX = rect.midX
-        let topY = rect.minY + rect.height * 0.16
-        let bottomY = rect.maxY - rect.height * 0.16
-        let headW = rect.width * 0.28
-        let headH = rect.height * 0.28
+        let topY = rect.minY + rect.height * 0.14
+        let bottomY = rect.maxY - rect.height * 0.14
+        let headW = rect.width * 0.26
+        let headH = rect.height * 0.26
 
         // Shaft.
         path.move(to: CGPoint(x: centerX, y: bottomY))
@@ -26,7 +26,7 @@ struct ArrowShape: Shape {
     }
 }
 
-/// The arrow glyph in a given color, with stroke width scaled to its size.
+/// The arrow glyph in a given color, with a thin stroke scaled to its size.
 struct ArrowGlyph: View {
     var color: Color
 
@@ -35,7 +35,7 @@ struct ArrowGlyph: View {
             ArrowShape().stroke(
                 color,
                 style: StrokeStyle(
-                    lineWidth: min(geo.size.width, geo.size.height) * 0.16,
+                    lineWidth: min(geo.size.width, geo.size.height) * 0.10,
                     lineCap: .round,
                     lineJoin: .round
                 )
