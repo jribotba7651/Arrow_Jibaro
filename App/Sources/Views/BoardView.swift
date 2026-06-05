@@ -39,6 +39,7 @@ struct BoardView: View {
                 }
             }
             .frame(width: side, height: side, alignment: .topLeading)
+            .background(DotGrid(spacing: max(14, cellSize / 2)))
             .modifier(ShakeEffect(animatableData: shake))
         }
         .aspectRatio(1, contentMode: .fit)
@@ -111,6 +112,33 @@ private struct Projectile: Identifiable {
     let id = UUID()
     let start: Position
     let direction: Direction
+}
+
+/// Subtle graph-paper dots behind the board.
+private struct DotGrid: View {
+    var spacing: CGFloat
+    var dotSize: CGFloat = 2
+    var color: Color = Color.gray.opacity(0.22)
+
+    var body: some View {
+        Canvas { context, size in
+            var y = spacing / 2
+            while y < size.height {
+                var x = spacing / 2
+                while x < size.width {
+                    let rect = CGRect(
+                        x: x - dotSize / 2,
+                        y: y - dotSize / 2,
+                        width: dotSize,
+                        height: dotSize
+                    )
+                    context.fill(Path(ellipseIn: rect), with: .color(color))
+                    x += spacing
+                }
+                y += spacing
+            }
+        }
+    }
 }
 
 /// A green ring that gently pulses to point out the suggested move.
