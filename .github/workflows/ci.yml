@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [claude/youthful-ramanujan-f1UPC]
+  pull_request:
+
+jobs:
+  core-tests:
+    name: ArrowsCore tests
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: swift test --package-path ArrowsCore
+
+  app-build:
+    name: Build app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+        working-directory: App
+      - name: Build
+        run: >
+          xcodebuild
+          -project ArrowsOffline.xcodeproj
+          -scheme ArrowsOffline
+          -destination 'generic/platform=iOS Simulator'
+          build
+          CODE_SIGNING_ALLOWED=NO
+        working-directory: App

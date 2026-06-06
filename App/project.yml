@@ -1,0 +1,29 @@
+name: ArrowsOffline
+options:
+  bundleIdPrefix: com.jibaroenlaluna
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+packages:
+  ArrowsCore:
+    path: ../ArrowsCore
+targets:
+  ArrowsOffline:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    dependencies:
+      - package: ArrowsCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.jibaroenlaluna.arrowsoffline
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.7"
+        INFOPLIST_KEY_CFBundleDisplayName: Arrows
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
