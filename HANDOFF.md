@@ -3,10 +3,38 @@
 Continue this project in Claude Code on the Mac. This file is the single source
 of truth for picking up where the web session left off.
 
+---
+
+## ⛔️ NON-NEGOTIABLE RULES (read first)
+
+1. **Do not break the existing game mechanic.** The arrow maze must remain
+   solvable by design. Any visual/density improvement must preserve the current
+   deterministic seeded generation and the puzzle rules (tap a piece -> it
+   slides along its head direction -> escapes if the path to the border is
+   clear, else collision/lose a life; win when the board is cleared).
+
+2. **Do not sacrifice guaranteed solvability.** Every generated level must be
+   solvable (greedy solver clears it). If a change makes the maze prettier but
+   reduces solvability, REJECT the change. Keep the reverse placement: a piece
+   is placed only if its head's forward path is clear of placed pieces and its
+   own body. Verify with `swift test` (`testGeneratedLevelsAreSolvable`,
+   `testGenerationIsDeterministic`).
+
+3. **Density inspiration only — do NOT add scope.** Use the "dense circuit /
+   subway / snake routes" look as inspiration, but DO NOT add: JSON level
+   systems, zoom/pan, 50x50–100x100 boards, mirrors, portals, walls, or new
+   piece types. Those are future features, not this task. Boards here are small
+   (3x3 .. ~8x8) and generated from a seed.
+
+**Focus only on:** denser arrow paths · thinner rounded lines · smoother
+corners · subtle dot-grid background · preserving deterministic seeded
+generation · preserving guaranteed solvability.
+
+---
+
 ## What this is
 An offline, 100% local SwiftUI clone of the *Arrows – Puzzle* mechanic
-(Lessmore). No account, no network, no ads. Personal use; original assets/levels
-only (mechanic reimplemented from scratch).
+(Lessmore). No account, no network, no ads. Mechanic reimplemented from scratch.
 
 ## Repo / branch / location
 - Repo: `jribotba7651/arrow_jibaro`
@@ -42,9 +70,9 @@ cd ArrowsCore && swift test
 cd App && xcodegen generate && open ArrowsOffline.xcodeproj
 # In Xcode: Shift+Cmd+K (clean), Cmd+R (run) on an iOS 16+ simulator.
 ```
-IMPORTANT: after adding/removing files under `App/Sources`, re-run
-`xcodegen generate` (the project lists files explicitly). Files inside the
-`ArrowsCore` Swift package are picked up automatically.
+After adding/removing files under `App/Sources`, re-run `xcodegen generate`
+(the project lists files explicitly). Files inside the `ArrowsCore` Swift
+package are picked up automatically.
 
 ## Mechanic (current model)
 - A `Piece` is a CONNECTED PATH of cells (`cells: [Position]`, tail..head) that
@@ -64,47 +92,41 @@ IMPORTANT: after adding/removing files under `App/Sources`, re-run
 - Core: compiles, all XCTest pass (CI green on the core job).
 - App: compiles and runs (Xcode 16 / iOS sim).
 - Bent snake pieces render as one continuous rounded line with a chevron head;
-  tapping a piece slides it off the board. (Tap fix: cells use
-  `.contentShape(Rectangle())` so taps register.)
+  tapping a piece slides it off the board. Tap targets use
+  `.contentShape(Rectangle())` so taps register.
 
 ## The goal right now: make it look like the original
-The original (see level 10 "Hard") is a DENSE maze of connected bent arrows,
-thin rounded line-art, on a light dotted paper background. Ours currently looks
-too SPARSE and the lines a bit thick. Iterate visually (build + run + compare
-screenshots) on:
+The original (level 10 "Hard") is a DENSE maze of connected bent arrows, thin
+rounded line-art, on a light dotted paper background. Ours currently looks too
+SPARSE and the lines a bit thick. Iterate visually (build + run + compare
+screenshots), within the NON-NEGOTIABLE RULES above:
 
-1. **Density (highest impact).** `ArrowsCore/Sources/ArrowsCore/Generator/LevelGenerator.swift`
-   should fill MOST of the board (few empty cells) while staying solvable. The
-   reverse-placement invariant (head forward-path clear of placed pieces) must
-   be preserved so it never produces an unsolvable board. Consider: more/longer
-   walks, smarter anchor/direction choice favoring near-border heads, and a
-   stronger leftover-cell fill pass. Re-run `swift test` after changes
-   (`testGeneratedLevelsAreSolvable`, `testGenerationIsDeterministic`).
-2. **Line weight / proportions.** `App/Sources/Views/BoardView.swift` ->
-   `strokeStyle` currently `lineWidth = cellSize * 0.12`. Tune line width,
-   chevron size (`PiecePath`), cell `spacing`, and head extension to match the
-   reference.
-3. **Layout polish.** The board can be bigger / better centered; reduce empty
-   white space below it (`GameView`).
+1. **Density (highest impact).** In
+   `ArrowsCore/Sources/ArrowsCore/Generator/LevelGenerator.swift`, fill ~75-90%
+   of cells with longer, turn-heavy paths, WHILE keeping the reverse-placement
+   solvability invariant and determinism. Re-run `swift test`.
+2. **Line weight / proportions.** In `App/Sources/Views/BoardView.swift` ->
+   `strokeStyle` (currently `lineWidth = cellSize * 0.12`), `PiecePath` (chevron
+   size, head extension), and `spacing`. Tune to the reference (fine rounded
+   lines).
+3. **Layout polish.** Board can be bigger / better centered (`GameView`).
 4. **Cleanup (optional).** `ArrowView.swift` / `FlyingArrowView.swift` are
-   legacy single-arrow glyphs (CollectionView still uses `ArrowGlyph`). Remove
-   or repurpose if not needed.
+   legacy single-arrow glyphs (CollectionView still uses `ArrowGlyph`).
 
 ## Key files for the visual work
 - `App/Sources/Views/BoardView.swift` — `PiecePath` (the rounded line), tap
-  targets, slide-out `GhostPieceView`, collision shake, `DotGrid`. This is the
-  main rendering file.
+  targets, slide-out `GhostPieceView`, collision shake, `DotGrid`.
 - `ArrowsCore/Sources/ArrowsCore/Generator/LevelGenerator.swift` — density.
 
-## Constraints / preferences
-- Keep it 100% offline (no network).
-- Keep the core pure Swift and test-covered; run `swift test` after core edits.
-- Keep generation deterministic from the seed and always solvable.
-- Match the reference look: dense, thin rounded connected lines, dotted bg.
+## Already solved (do not rebuild)
+The board already uses grid coordinates (not pixels), procedural rendering, a
+`Canvas`-drawn dot grid, and automatic scaling/centering via `GeometryReader` +
+`.aspectRatio(1)`. No generic 100x100 dot-grid engine is needed.
 
-## Suggested first prompt for the CLI session
-> Read HANDOFF.md. The app builds and runs on this branch. Make the board look
-> like the original Arrows puzzle: much denser packing (LevelGenerator) and
-> finer rounded lines (BoardView/PiecePath), iterating by building and running
-> in the iOS simulator and comparing to reference screenshots. Keep the core
-> solvable and tested (swift test).
+## Suggested first prompt for the CLI session (speak Spanish, guide me)
+> Lee HANDOFF.md y respeta las NON-NEGOTIABLE RULES. La app compila y corre en
+> esta rama. Haz el tablero más denso (LevelGenerator, ~75-90% de celdas,
+> siempre resoluble y determinista) y las líneas más finas/redondeadas
+> (BoardView/PiecePath), iterando con build+run en el simulador y comparando con
+> screenshots de referencia. Corre `swift test` tras cambios del núcleo.
+> Guíame en español paso a paso; commit+push a la rama.
