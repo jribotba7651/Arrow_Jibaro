@@ -31,6 +31,19 @@ final class LevelGeneratorTests: XCTestCase {
         XCTAssertTrue(generated.board.pieces.values.contains { $0.length > 1 })
     }
 
+    func testNoSingleCellPieces() {
+        // Single-cell pieces render as isolated glyphs — they must never appear.
+        for level in 1...8 {
+            let generated = LevelGenerator.generate(level: level, seed: UInt64(level) * 53)
+            for piece in generated.board.pieces.values {
+                XCTAssertGreaterThanOrEqual(
+                    piece.cells.count, 2,
+                    "level \(level) piece \(piece.id) has only 1 cell"
+                )
+            }
+        }
+    }
+
     func testDailySeedIsStable() {
         XCTAssertEqual(DailyChallenge.seed(year: 2026, month: 6, day: 5), 20_260_605)
     }
