@@ -14,9 +14,14 @@ public struct GeneratedLevel: Hashable {
 }
 
 /// Builds dense, always-solvable boards of bending snake pieces. Generation is
-/// in reverse: each new piece (a self-avoiding random walk) is placed only if
-/// its head's forward path is clear of already-placed pieces and of its own
-/// body, which guarantees the forward solve order exists.
+/// in reverse: each new piece is placed only if its head's forward path is clear
+/// of already-placed pieces and of its own body, which guarantees the forward
+/// solve order exists.
+///
+/// Density: a first pass grows self-avoiding random walks (the bendy "snake"
+/// look); a second deterministic pass fills remaining gaps with straight pieces
+/// whose head has a clear path. Both passes preserve the reverse-placement
+/// solvability invariant, so the board is always greedy-solvable.
 public enum LevelGenerator {
     /// Grid side length: level 1 -> 3x3, level 2 -> 4x4, ...
     public static func size(forLevel level: Int) -> Int {
@@ -34,9 +39,10 @@ public enum LevelGenerator {
         var occupied = [[Bool]](repeating: [Bool](repeating: false, count: n), count: n)
         var placed: [Piece] = []
         var nextID = 0
-        var stalls = 0
-        let stallLimit = n * n * 3
 
+        // Pass 1 — bendy snake walks from random anchors.
+        var stalls = 0
+        let stallLimit = n * n * 6
         while stalls < stallLimit {
             let empties = emptyCells(occupied, n)
             if empties.isEmpty { break }
@@ -52,16 +58,20 @@ public enum LevelGenerator {
             }
         }
 
-        // Fill leftover single cells with a length-1 piece that has a clear path.
-        for r in 0..<n {
-            for c in 0..<n where !occupied[r][c] {
-                let cell = Position(row: r, col: c)
-                for dir in Direction.allCases
-                where frontClear(head: cell, dir: dir, occupied: occupied, size: n, exclude: [cell]) {
-                    placed.append(Piece(id: nextID, cells: [cell], headDirection: dir))
-                    occupied[r][c] = true
-                    nextID += 1
-                    break
+        // Pass 2 — deterministic straight fill of the remaining gaps. Repeated
+        // sweeps until a full sweep places nothing, for maximum density.
+        var progressed = true
+        while progressed {
+            progressed = false
+            for r in 0..<n {
+                for c in 0..<n where !occupied[r][c] {
+                    if let piece = straightPiece(at: Position(row: r, col: c), occupied: occupied,
+                                                 size: n, maxLength: maxLength, id: nextID) {
+                        for cell in piece.cells { occupied[cell.row][cell.col] = true }
+                        placed.append(piece)
+                        nextID += 1
+                        progressed = true
+                    }
                 }
             }
         }
@@ -124,6 +134,28 @@ public enum LevelGenerator {
             return nil
         }
         return Piece(id: id, cells: path, headDirection: headDirection)
+    }
+
+    /// The longest straight piece (up to `maxLength`) whose tail is `cell`, in
+    /// the first direction whose head has a clear forward path. Deterministic.
+    private static func straightPiece(at cell: Position, occupied: [[Bool]], size n: Int,
+                                      maxLength: Int, id: Int) -> Piece? {
+        for dir in Direction.allCases {
+            let (dr, dc) = dir.delta
+            // Length of the empty run from `cell` going forward (including cell).
+            var run = 1
+            var r = cell.row + dr, c = cell.col + dc
+            while run < maxLength && inBounds(r, c, n) && !occupied[r][c] {
+                run += 1; r += dr; c += dc
+            }
+            var cells: [Position] = []
+            for i in 0..<run { cells.append(Position(row: cell.row + dr * i, col: cell.col + dc * i)) }
+            let head = cells[cells.count - 1]
+            if frontClear(head: head, dir: dir, occupied: occupied, size: n, exclude: Set(cells)) {
+                return Piece(id: id, cells: cells, headDirection: dir)
+            }
+        }
+        return nil
     }
 
     private static func direction(from a: Position, to b: Position) -> Direction {
