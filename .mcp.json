@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "desktop-commander": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@wonderwhy-er/desktop-commander@latest"
+      ]
+    },
+    "xtuple-mdm": {
+      "command": "C:/Users/juanr/AppData/Local/Microsoft/WindowsApps/python3.11.exe",
+      "args": [
+        "C:/Users/juanr/Downloads/xtuple_mcp_server.py"
+      ]
+    },
+    "omi": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "OMI_API_KEY",
+        "omiai/mcp-server"
+      ],
+      "env": {
+        "OMI_API_KEY": "${OMI_API_KEY}"
+      }
+    }
+  }
+}
